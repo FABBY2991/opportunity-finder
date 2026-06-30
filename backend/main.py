@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from database import get_db
+from database import db_select, db_upsert, health_check
 from scraper import run_all_scrapers
 
 logging.basicConfig(level=logging.INFO)
@@ -22,19 +22,17 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fro
 
 
 def save_opportunities(items: list[dict]):
-    try:
-        db = get_db()
-        for item in items:
-            try:
-                db.table("opportunities").upsert(
-                    {**item, "scraped_at": datetime.now(timezone.utc).isoformat()},
-                    on_conflict="url",
-                ).execute()
-            except Exception as e:
-                logger.warning(f"DB upsert failed: {e}")
-        logger.info(f"Saved {len(items)} opportunities")
-    except Exception as e:
-        logger.error(f"save_opportunities failed: {e}")
+    saved = 0
+    for item in items:
+        try:
+            db_upsert("opportunities", {
+                **item,
+                "scraped_at": datetime.now(timezone.utc).isoformat()
+            })
+            saved += 1
+        except Exception as e:
+            logger.warning(f"Upsert failed: {e}")
+    logger.info(f"Saved {saved}/{len(items)} opportunities")
 
 
 def scrape_and_save():
@@ -49,7 +47,6 @@ def scrape_and_save():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Run first scrape in background thread so port binds immediately
     threading.Thread(target=scrape_and_save, daemon=True).start()
     scheduler.add_job(scrape_and_save, "interval", hours=1, id="hourly_scrape")
     scheduler.start()
@@ -69,12 +66,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health():
-    try:
-        db = get_db()
-        result = db.table("opportunities").select("id").limit(1).execute()
-        return {"status": "ok", "db": "connected", "rows": len(result.data)}
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"status": "error", "detail": str(e)})
+    return health_check()
 
 
 @app.get("/api/opportunities")
@@ -86,16 +78,21 @@ def get_opportunities(
     offset: int = Query(default=0),
 ):
     try:
-        db = get_db()
-        query = db.table("opportunities").select("*").order("scraped_at", desc=True)
+        filters = {}
         if category:
-            query = query.eq("category", category)
+            filters["category"] = f"eq.{category}"
         if country:
-            query = query.eq("country", country)
+            filters["country"] = f"eq.{country}"
         if search:
-            query = query.ilike("title", f"%{search}%")
-        result = query.range(offset, offset + limit - 1).execute()
-        return {"data": result.data, "count": len(result.data)}
+            filters["title"] = f"ilike.*{search}*"
+        data = db_select(
+            "opportunities",
+            filters=filters,
+            limit=limit,
+            offset=offset,
+            order="scraped_at.desc"
+        )
+        return {"data": data, "count": len(data)}
     except Exception as e:
         logger.error(f"get_opportunities error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -104,9 +101,8 @@ def get_opportunities(
 @app.get("/api/categories")
 def get_categories():
     try:
-        db = get_db()
-        result = db.table("opportunities").select("category").execute()
-        cats = sorted({r["category"] for r in result.data if r.get("category")})
+        rows = db_select("opportunities", columns="category", limit=1000)
+        cats = sorted({r["category"] for r in rows if r.get("category")})
         return {"categories": cats}
     except Exception as e:
         return {"categories": []}
@@ -115,9 +111,8 @@ def get_categories():
 @app.get("/api/countries")
 def get_countries():
     try:
-        db = get_db()
-        result = db.table("opportunities").select("country").execute()
-        countries = sorted({r["country"] for r in result.data if r.get("country")})
+        rows = db_select("opportunities", columns="country", limit=1000)
+        countries = sorted({r["country"] for r in rows if r.get("country")})
         return {"countries": countries}
     except Exception as e:
         return {"countries": []}
@@ -129,10 +124,9 @@ def trigger_scrape():
     return {"status": "scraping in background"}
 
 
-# Serve frontend static files
 if os.path.isdir(STATIC_DIR):
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 else:
     @app.get("/")
     def root():
-        return {"message": "OpportunityFinder API running", "frontend_dir": STATIC_DIR}
+        return {"message": "API running", "static_dir": STATIC_DIR}
