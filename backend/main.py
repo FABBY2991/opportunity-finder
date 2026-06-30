@@ -40,8 +40,8 @@ def scrape_and_save():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scrape_and_save()  # run once on startup
-    scheduler.add_job(scrape_and_save, "interval", hours=1, id="hourly_scrape")
+    scheduler.add_job(scrape_and_save, "interval", hours=1, id="hourly_scrape",
+                      next_run_time=datetime.now(timezone.utc))
     scheduler.start()
     yield
     scheduler.shutdown()
