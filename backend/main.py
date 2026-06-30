@@ -67,34 +67,44 @@ def get_opportunities(
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0),
 ):
-    db = get_db()
-    query = db.table("opportunities").select("*").order("scraped_at", desc=True)
-
-    if category:
-        query = query.eq("category", category)
-    if country:
-        query = query.eq("country", country)
-    if search:
-        query = query.ilike("title", f"%{search}%")
-
-    result = query.range(offset, offset + limit - 1).execute()
-    return {"data": result.data, "count": len(result.data)}
+    try:
+        db = get_db()
+        query = db.table("opportunities").select("*").order("scraped_at", desc=True)
+        if category:
+            query = query.eq("category", category)
+        if country:
+            query = query.eq("country", country)
+        if search:
+            query = query.ilike("title", f"%{search}%")
+        result = query.range(offset, offset + limit - 1).execute()
+        return {"data": result.data, "count": len(result.data)}
+    except Exception as e:
+        logger.error(f"get_opportunities error: {e}")
+        return {"data": [], "count": 0, "error": str(e)}
 
 
 @app.get("/api/categories")
 def get_categories():
-    db = get_db()
-    result = db.table("opportunities").select("category").execute()
-    cats = sorted({r["category"] for r in result.data if r.get("category")})
-    return {"categories": cats}
+    try:
+        db = get_db()
+        result = db.table("opportunities").select("category").execute()
+        cats = sorted({r["category"] for r in result.data if r.get("category")})
+        return {"categories": cats}
+    except Exception as e:
+        logger.error(f"get_categories error: {e}")
+        return {"categories": []}
 
 
 @app.get("/api/countries")
 def get_countries():
-    db = get_db()
-    result = db.table("opportunities").select("country").execute()
-    countries = sorted({r["country"] for r in result.data if r.get("country")})
-    return {"countries": countries}
+    try:
+        db = get_db()
+        result = db.table("opportunities").select("country").execute()
+        countries = sorted({r["country"] for r in result.data if r.get("country")})
+        return {"countries": countries}
+    except Exception as e:
+        logger.error(f"get_countries error: {e}")
+        return {"countries": []}
 
 
 @app.post("/api/scrape")
