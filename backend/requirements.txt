@@ -8,7 +8,3 @@ lxml==5.2.2
 supabase==2.7.4
 python-dotenv==1.0.1
 pydantic==2.7.1
-gotrue==2.7.0
-postgrest==0.17.1
-storage3==0.8.1
-realtime==2.0.2
