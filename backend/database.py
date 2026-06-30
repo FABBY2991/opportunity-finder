@@ -30,10 +30,16 @@ def db_select(table: str, filters: dict = None, columns: str = "*", limit: int =
 
 def db_upsert(table: str, data: dict) -> None:
     url = f"{SUPABASE_URL}/rest/v1/{table}"
-    headers = {**HEADERS, "Prefer": "resolution=merge-duplicates,return=minimal"}
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=minimal",
+    }
     with httpx.Client(timeout=10) as client:
         resp = client.post(url, headers=headers, json=data)
-        resp.raise_for_status()
+        if resp.status_code not in (200, 201, 204):
+            raise Exception(f"Upsert failed {resp.status_code}: {resp.text}")
 
 
 def health_check() -> dict:

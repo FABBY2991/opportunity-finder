@@ -23,6 +23,7 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fro
 
 def save_opportunities(items: list[dict]):
     saved = 0
+    last_error = None
     for item in items:
         try:
             db_upsert("opportunities", {
@@ -31,8 +32,9 @@ def save_opportunities(items: list[dict]):
             })
             saved += 1
         except Exception as e:
+            last_error = str(e)
             logger.warning(f"Upsert failed: {e}")
-    logger.info(f"Saved {saved}/{len(items)} opportunities")
+    logger.info(f"Saved {saved}/{len(items)} opportunities. Last error: {last_error}")
 
 
 def scrape_and_save():
