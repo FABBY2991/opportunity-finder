@@ -1,12 +1,13 @@
 import logging
 import os
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import get_db
@@ -15,36 +16,45 @@ from scraper import run_all_scrapers
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
+scheduler = BackgroundScheduler()
+
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
 
 
 def save_opportunities(items: list[dict]):
-    db = get_db()
-    for item in items:
-        try:
-            db.table("opportunities").upsert(
-                {**item, "scraped_at": datetime.now(timezone.utc).isoformat()},
-                on_conflict="url",
-            ).execute()
-        except Exception as e:
-            logger.warning(f"DB upsert failed for {item.get('url')}: {e}")
-    logger.info(f"Saved {len(items)} opportunities")
+    try:
+        db = get_db()
+        for item in items:
+            try:
+                db.table("opportunities").upsert(
+                    {**item, "scraped_at": datetime.now(timezone.utc).isoformat()},
+                    on_conflict="url",
+                ).execute()
+            except Exception as e:
+                logger.warning(f"DB upsert failed: {e}")
+        logger.info(f"Saved {len(items)} opportunities")
+    except Exception as e:
+        logger.error(f"save_opportunities failed: {e}")
 
 
 def scrape_and_save():
-    logger.info("Starting scheduled scrape...")
-    items = run_all_scrapers()
-    save_opportunities(items)
-    logger.info(f"Scrape done. {len(items)} items found.")
+    logger.info("Scrape started...")
+    try:
+        items = run_all_scrapers()
+        save_opportunities(items)
+        logger.info(f"Scrape complete: {len(items)} items")
+    except Exception as e:
+        logger.error(f"Scrape failed: {e}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    scheduler.add_job(scrape_and_save, "interval", hours=1, id="hourly_scrape",
-                      next_run_time=datetime.now(timezone.utc))
+    # Run first scrape in background thread so port binds immediately
+    threading.Thread(target=scrape_and_save, daemon=True).start()
+    scheduler.add_job(scrape_and_save, "interval", hours=1, id="hourly_scrape")
     scheduler.start()
     yield
-    scheduler.shutdown()
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(title="OpportunityFinder", lifespan=lifespan)
@@ -56,7 +66,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+
+@app.get("/api/health")
+def health():
+    try:
+        db = get_db()
+        result = db.table("opportunities").select("id").limit(1).execute()
+        return {"status": "ok", "db": "connected", "rows": len(result.data)}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "detail": str(e)})
 
 
 @app.get("/api/opportunities")
@@ -80,7 +98,7 @@ def get_opportunities(
         return {"data": result.data, "count": len(result.data)}
     except Exception as e:
         logger.error(f"get_opportunities error: {e}")
-        return {"data": [], "count": 0, "error": str(e)}
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.get("/api/categories")
@@ -91,7 +109,6 @@ def get_categories():
         cats = sorted({r["category"] for r in result.data if r.get("category")})
         return {"categories": cats}
     except Exception as e:
-        logger.error(f"get_categories error: {e}")
         return {"categories": []}
 
 
@@ -103,19 +120,19 @@ def get_countries():
         countries = sorted({r["country"] for r in result.data if r.get("country")})
         return {"countries": countries}
     except Exception as e:
-        logger.error(f"get_countries error: {e}")
         return {"countries": []}
 
 
 @app.post("/api/scrape")
 def trigger_scrape():
-    scrape_and_save()
-    return {"status": "done"}
+    threading.Thread(target=scrape_and_save, daemon=True).start()
+    return {"status": "scraping in background"}
 
 
-@app.get("/", response_class=FileResponse)
-def serve_frontend():
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
-
-
-app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+# Serve frontend static files
+if os.path.isdir(STATIC_DIR):
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+else:
+    @app.get("/")
+    def root():
+        return {"message": "OpportunityFinder API running", "frontend_dir": STATIC_DIR}

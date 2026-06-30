@@ -111,7 +111,7 @@ async function loadJobs() {
     document.getElementById("result-count").textContent = `${jobs.length} listings`;
     document.getElementById("last-updated").textContent = `Updated ${timeSince(new Date().toISOString())} ago`;
   } catch (e) {
-    grid.innerHTML = `<p class="empty">Could not load jobs: ${e.message}</p>`;
+    grid.innerHTML = `<p class="empty">Could not load jobs — scraper is still warming up. Wait 1 minute and click Refresh.</p>`;
   }
 }
 
