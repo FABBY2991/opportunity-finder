@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpportunityFinder — Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d0f14; color: #e2e8f0; min-height: 100vh; }
+
+    header { background: linear-gradient(135deg, #1a1f2e 0%, #0f172a 100%); border-bottom: 1px solid #1e293b; padding: 1.5rem 2rem; position: sticky; top: 0; z-index: 100; }
+    .header-inner { max-width: 1200px; margin: auto; }
+    .logo { display: flex; align-items: center; gap: .6rem; margin-bottom: .3rem; }
+    .logo h1 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; }
+    .dot { width: 10px; height: 10px; background: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 50% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } }
+    .live-badge { background: #22c55e22; color: #22c55e; font-size: .65rem; font-weight: 700; padding: .2rem .5rem; border-radius: 999px; border: 1px solid #22c55e55; letter-spacing: .08em; }
+    .subtitle { font-size: .85rem; color: #64748b; }
+
+    .filters { max-width: 1200px; margin: 1.5rem auto 0; padding: 0 1.5rem; display: flex; flex-wrap: wrap; gap: .75rem; }
+    .filters input, .filters select { flex: 1; min-width: 160px; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: .6rem 1rem; border-radius: 8px; font-size: .9rem; outline: none; }
+    .filters input:focus, .filters select:focus { border-color: #6366f1; }
+    #btn-refresh { background: #6366f1; border: none; color: #fff; padding: .6rem 1.2rem; border-radius: 8px; font-size: .9rem; cursor: pointer; white-space: nowrap; }
+    #btn-refresh:hover { background: #4f46e5; }
+
+    .stats-bar { max-width: 1200px; margin: .8rem auto 0; padding: 0 1.5rem; display: flex; justify-content: space-between; font-size: .8rem; color: #64748b; }
+
+    .job-grid { max-width: 1200px; margin: 1rem auto 2rem; padding: 0 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+
+    .job-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: .5rem; transition: transform .15s, border-color .15s; animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+    .job-card:hover { transform: translateY(-2px); border-color: #6366f1; }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+    .job-title { font-size: .95rem; font-weight: 600; color: #f1f5f9; line-height: 1.3; flex: 1; }
+    .country-badge { font-size: .7rem; font-weight: 600; padding: .2rem .6rem; border-radius: 6px; background: #0f172a; border: 1px solid #334155; color: #94a3b8; white-space: nowrap; display: flex; align-items: center; gap: .3rem; }
+
+    .category-tag { display: inline-block; font-size: .7rem; font-weight: 600; padding: .2rem .65rem; border-radius: 6px; text-transform: uppercase; letter-spacing: .04em; align-self: flex-start; }
+    .tag-writing   { background:#1d4ed822; color:#60a5fa; border:1px solid #1d4ed855; }
+    .tag-chatting  { background:#7c3aed22; color:#a78bfa; border:1px solid #7c3aed55; }
+    .tag-onlyfans  { background:#be185d22; color:#f472b6; border:1px solid #be185d55; }
+    .tag-va        { background:#065f4622; color:#34d399; border:1px solid #065f4655; }
+    .tag-social    { background:#92400e22; color:#fbbf24; border:1px solid #92400e55; }
+    .tag-support   { background:#0e749022; color:#22d3ee; border:1px solid #0e749055; }
+    .tag-data      { background:#37415122; color:#9ca3af; border:1px solid #4b556355; }
+    .tag-tutoring  { background:#16653422; color:#4ade80; border:1px solid #16653455; }
+    .tag-voice     { background:#7f1d1d22; color:#fca5a5; border:1px solid #7f1d1d55; }
+
+    .job-desc { font-size: .82rem; color: #94a3b8; line-height: 1.5; }
+    .card-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: .25rem; }
+    .pay { font-size: .82rem; color: #22c55e; font-weight: 600; }
+    .source { font-size: .75rem; color: #475569; }
+    .apply-btn { display: inline-block; margin-top: .5rem; background: #6366f122; color: #818cf8; border: 1px solid #6366f155; border-radius: 7px; padding: .4rem .9rem; font-size: .8rem; text-decoration: none; font-weight: 600; align-self: flex-end; }
+    .apply-btn:hover { background: #6366f133; color: #a5b4fc; }
+
+    .load-more-wrap { text-align: center; padding-bottom: 2rem; }
+    #btn-more { background: #1e293b; color: #818cf8; border: 1px solid #6366f155; border-radius: 8px; padding: .65rem 2rem; font-size: .9rem; cursor: pointer; }
+
+    @media(max-width:600px){ .filters { flex-direction: column; } .job-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="dot"></span>
+      <h1>OpportunityFinder</h1>
+      <span class="live-badge">LIVE</span>
+    </div>
+    <p class="subtitle">Entry-level online jobs &amp; gigs — updated every hour</p>
+  </div>
+</header>
+
+<main>
+  <section class="filters">
+    <input type="text" id="search" placeholder="Search jobs..." oninput="filterCards()" />
+    <select id="filter-category" onchange="filterCards()">
+      <option value="">All Categories</option>
+      <option>Writing &amp; Content</option>
+      <option>Chatting &amp; Companion</option>
+      <option>OnlyFans Agency</option>
+      <option>Virtual Assistant</option>
+      <option>Social Media</option>
+      <option>Customer Support</option>
+      <option>Transcription &amp; Data</option>
+      <option>Tutoring &amp; Coaching</option>
+      <option>Voiceover &amp; Narration</option>
+    </select>
+    <select id="filter-country" onchange="filterCards()">
+      <option value="">All Countries</option>
+      <option>🇺🇸 USA</option>
+      <option>🇬🇧 UK</option>
+      <option>🇨🇦 Canada</option>
+      <option>🌍 Worldwide</option>
+      <option>💻 Remote</option>
+    </select>
+    <button id="btn-refresh">&#8635; Refresh</button>
+  </section>
+
+  <div class="stats-bar">
+    <span id="result-count">18 listings</span>
+    <span id="last-updated">Updated just now</span>
+  </div>
+
+  <div class="job-grid" id="job-grid"></div>
+
+  <div class="load-more-wrap">
+    <button id="btn-more">Load more</button>
+  </div>
+</main>
+
+<script>
+const JOBS = [
+  { title: "Freelance Blog Writer — Tech & Lifestyle", category: "Writing & Content", catClass: "tag-writing", country: "🇺🇸 USA", pay: "$0.10/word", source: "ProBlogger", time: "12m ago", desc: "Write 1,000-word articles on tech trends and lifestyle. No experience required — style guide provided.", url: "#" },
+  { title: "Online Chatter / Fan Engagement Agent", category: "Chatting & Companion", catClass: "tag-chatting", country: "🌍 Worldwide", pay: "$15–$25/hr", source: "ChatOperatorJobs", time: "34m ago", desc: "Work with a top agency managing creator fan pages. Flexible hours, training included. 18+ only.", url: "#" },
+  { title: "OnlyFans Agency Chatter — Full-Time Remote", category: "OnlyFans Agency", catClass: "tag-onlyfans", country: "🇺🇸 USA", pay: "$18–$30/hr", source: "Indeed", time: "1h ago", desc: "Join our agency managing communications for top creators. No experience needed — full training provided. US preferred.", url: "#" },
+  { title: "Virtual Assistant — Admin & Scheduling", category: "Virtual Assistant", catClass: "tag-va", country: "🇺🇸 USA", pay: "$12–$18/hr", source: "We Work Remotely", time: "2h ago", desc: "Handle emails, calendar management and data entry for a US-based e-commerce company. Entry-level friendly.", url: "#" },
+  { title: "Social Media Manager — Instagram & TikTok", category: "Social Media", catClass: "tag-social", country: "🌍 Worldwide", pay: "$500/mo", source: "Working Nomads", time: "2h ago", desc: "Create and schedule content for a lifestyle brand. Must know Instagram and TikTok. Flexible part-time.", url: "#" },
+  { title: "Companion Chat Operator — Evening Shifts", category: "Chatting & Companion", catClass: "tag-chatting", country: "🇬🇧 UK", pay: "$14/hr", source: "ChatOperatorJobs", time: "3h ago", desc: "Online companion platform looking for warm, engaging communicators for evening shifts. Training provided.", url: "#" },
+  { title: "Remote Transcriptionist — Audio to Text", category: "Transcription & Data", catClass: "tag-data", country: "💻 Remote", pay: "$0.75/min audio", source: "Upwork", time: "3h ago", desc: "Transcribe podcast and meeting audio files. Work at your own pace. No experience required.", url: "#" },
+  { title: "Online English Tutor — Beginner Students", category: "Tutoring & Coaching", catClass: "tag-tutoring", country: "🇺🇸 USA", pay: "$20–$35/hr", source: "Remote.co", time: "4h ago", desc: "Teach conversational English to international students online. Native or fluent English required. Flexible schedule.", url: "#" },
+  { title: "SEO Content Writer — Health Niche", category: "Writing & Content", catClass: "tag-writing", country: "🇺🇸 USA", pay: "$25–$40/article", source: "Blogging Pro", time: "4h ago", desc: "Write SEO-optimized health articles. Research and keyword guide provided. No degree required.", url: "#" },
+  { title: "Customer Support Chat Agent — E-commerce", category: "Customer Support", catClass: "tag-support", country: "🇨🇦 Canada", pay: "$16/hr", source: "Indeed", time: "5h ago", desc: "Handle live chat customer enquiries for an online store. Full training. Entry level welcome.", url: "#" },
+  { title: "Voiceover Artist — Short Ad Scripts", category: "Voiceover & Narration", catClass: "tag-voice", country: "🌍 Worldwide", pay: "$50–$150/script", source: "Upwork", time: "6h ago", desc: "Record voiceovers for social media ads from home. Home studio preferred but not required.", url: "#" },
+  { title: "OnlyFans Model Manager — Agency Hiring", category: "OnlyFans Agency", catClass: "tag-onlyfans", country: "🇺🇸 USA", pay: "$20–$40/hr", source: "Reddit r/forhire", time: "6h ago", desc: "Manage creator accounts, growth strategy and fan communication for an established US agency.", url: "#" },
+  { title: "Pinterest Content Scheduler", category: "Social Media", catClass: "tag-social", country: "💻 Remote", pay: "$300–$600/mo", source: "Hubstaff Talent", time: "7h ago", desc: "Create and schedule Pinterest pins for a home décor brand. Part-time, 10 hrs/week. Beginners OK.", url: "#" },
+  { title: "Ghostwriter — Personal Finance Blog", category: "Writing & Content", catClass: "tag-writing", country: "🇺🇸 USA", pay: "$50–$100/post", source: "Freelance Writing Gigs", time: "8h ago", desc: "Write personal finance posts for a US financial blog. No byline. Topics and outline provided.", url: "#" },
+  { title: "Data Entry Specialist — Product Listings", category: "Transcription & Data", catClass: "tag-data", country: "🌍 Worldwide", pay: "$8–$12/hr", source: "We Work Remotely", time: "9h ago", desc: "Enter and clean product data for an e-commerce platform. Fully remote, flexible hours. Beginner friendly.", url: "#" },
+  { title: "ESL Online Tutor — Kids Age 5–12", category: "Tutoring & Coaching", catClass: "tag-tutoring", country: "🌍 Worldwide", pay: "$18–$26/hr", source: "Remote.co", time: "10h ago", desc: "Teach English to young learners from home. Structured lesson plans provided. Fun and rewarding.", url: "#" },
+  { title: "Fan Page Chat Operator — Aroa-Style Agency", category: "Chatting & Companion", catClass: "tag-chatting", country: "🇺🇸 USA", pay: "$20/hr + bonuses", source: "ChatOperatorJobs", time: "11h ago", desc: "Manage conversations for creator fan pages. High-earning potential with performance bonuses. Fully remote.", url: "#" },
+  { title: "Remote Email Support Rep — SaaS Startup", category: "Customer Support", catClass: "tag-support", country: "🇺🇸 USA", pay: "$14–$18/hr", source: "Working Nomads", time: "12h ago", desc: "Handle customer emails and help tickets for a growing SaaS product. No experience required — full onboarding.", url: "#" },
+];
+
+function renderCards(jobs) {
+  const grid = document.getElementById("job-grid");
+  if (jobs.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#475569;padding:3rem 0">No results — try clearing filters.</p>';
+    return;
+  }
+  grid.innerHTML = jobs.map(j => `
+    <div class="job-card" data-cat="${j.category}" data-country="${j.country}" data-title="${j.title.toLowerCase()}">
+      <div class="card-top">
+        <div class="job-title">${j.title}</div>
+        <div class="country-badge">${j.country}</div>
+      </div>
+      <span class="category-tag ${j.catClass}">${j.category}</span>
+      <p class="job-desc">${j.desc}</p>
+      <div class="card-bottom">
+        <span class="pay">${j.pay}</span>
+        <span class="source">${j.source} · ${j.time}</span>
+      </div>
+      <a class="apply-btn" href="${j.url}">Apply / View →</a>
+    </div>`).join("");
+  document.getElementById("result-count").textContent = `${jobs.length} listings`;
+}
+
+function filterCards() {
+  const search = document.getElementById("search").value.toLowerCase();
+  const cat = document.getElementById("filter-category").value;
+  const country = document.getElementById("filter-country").value;
+  const filtered = JOBS.filter(j => {
+    const matchSearch = !search || j.title.toLowerCase().includes(search) || j.desc.toLowerCase().includes(search);
+    const matchCat = !cat || j.category === cat || j.category === cat.replace("&amp;", "&");
+    const matchCountry = !country || j.country.includes(country.replace(/^[^\s]+ /, ""));
+    return matchSearch && matchCat && matchCountry;
+  });
+  renderCards(filtered);
+}
+
+renderCards(JOBS);
+</script>
+</body>
+</html>

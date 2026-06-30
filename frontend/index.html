@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpportunityFinder — Live Feed</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="dot"></span>
+        <h1>OpportunityFinder</h1>
+        <span class="live-badge">LIVE</span>
+      </div>
+      <p class="subtitle">Entry-level online jobs & gigs — updated every hour</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="filters">
+      <input type="text" id="search" placeholder="Search jobs..." />
+      <select id="filter-category">
+        <option value="">All Categories</option>
+      </select>
+      <select id="filter-country">
+        <option value="">All Countries</option>
+      </select>
+      <button id="btn-refresh" onclick="loadJobs()">&#8635; Refresh</button>
+    </section>
+
+    <div class="stats-bar">
+      <span id="result-count">Loading...</span>
+      <span id="last-updated"></span>
+    </div>
+
+    <div id="job-grid" class="job-grid">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="load-more-wrap">
+      <button id="btn-more" onclick="loadMore()" style="display:none">Load more</button>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
