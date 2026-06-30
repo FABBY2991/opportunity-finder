@@ -75,8 +75,9 @@ function renderCard(job) {
   const flag = countryFlag(job.country);
   const catCls = categoryClass(job.category);
   const timeAgo = job.scraped_at ? timeSince(job.scraped_at) : "";
+  const url = job.url ? escHtml(job.url) : "#";
   return `
-    <div class="job-card">
+    <a class="job-card" href="${url}" target="_blank" rel="noopener noreferrer">
       <div class="card-top">
         <div class="job-title">${escHtml(job.title)}</div>
         <div class="country-badge">
@@ -89,8 +90,8 @@ function renderCard(job) {
         <span class="pay">${escHtml(job.pay || "Negotiable")}</span>
         <span class="source">${escHtml(job.source)} · ${timeAgo}</span>
       </div>
-      ${job.url ? `<a class="apply-btn" href="${escHtml(job.url)}" target="_blank" rel="noopener">Apply / View →</a>` : ""}
-    </div>`;
+      <span class="apply-btn">Apply / View →</span>
+    </a>`;
 }
 
 async function loadJobs() {
